@@ -65,21 +65,17 @@ POST /api/v1/genres/
 ```
 - Частичное обновление информации о произведении:
 ```
-PATCH /api/v1/titles/{titles_id}/
+PATCH /api/v1/titles/<titles_id>/
 ```
 - Удаление отзыва по id:
 ```
-DELETE /api/v1/titles/{title_id}/reviews/{review_id}/
+DELETE /api/v1/titles/<title_id>/reviews/<review_id>/
 ```
 - Получение комментария к отзыву:
 ```
-GET /api/v1/titles/{title_id}/reviews/{review_id}/comments/{comment_id}/
+GET /api/v1/titles/<title_id>/reviews/<review_id>/comments/<comment_id>/
 ```
 - Удаление пользователя по username:
 ```
-DELETE /api/v1/users/{username}/
-```
-- Изменение данных своей учетной записи:
-```
-PATCH /api/v1/users/me/
+DELETE /api/v1/users/username/
 ```
