@@ -33,6 +33,7 @@ class Title(models.Model):
     name = models.CharField("Название произведения", max_length=200)
     year = models.IntegerField("Год выпуска")
     description = models.CharField("Описание", max_length=256)
+    genre = models.ManyToManyField(Genre)
     category = models.ForeignKey(
         Category,
         blank=True,
@@ -46,6 +47,7 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
+        ordering = ['name']
 
     def __str__(self):
         return self.name

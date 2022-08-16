@@ -9,6 +9,8 @@ v1_router = DefaultRouter()
 
 v1_router.register(r'users', views.UsersViewSet, basename='users')
 v1_router.register(r'categories', views.CategoryViewSet, basename='category')
+v1_router.register(r'genres', views.GenreViewSet, basename='genre')
+v1_router.register(r'titles', views.TitleViewSet, basename='title')
 
 urlpatterns = [
     path('v1/auth/signup/', views.SignupAPIView.as_view(), name='signup'),

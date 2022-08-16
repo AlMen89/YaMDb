@@ -1,7 +1,9 @@
 from django.conf import settings
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, status, viewsets, mixins, permissions
+from rest_framework import filters, status, viewsets, mixins
+from django_filters import FilterSet, CharFilter, NumberFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -10,9 +12,10 @@ from rest_framework.pagination import LimitOffsetPagination
 from users.models import User
 
 from .permissions import AdminAccess, AdminOrReadOnly
-from .serializers import (GetTokenSerializer, MeSerializer, SignupSerializer,
-                          UsersSerializer, CategorySerializer)
-from reviews.models import Category
+from .serializers import (
+    GetTokenSerializer, MeSerializer, SignupSerializer, UsersSerializer,
+    CategorySerializer, GenreSerializer, TitleSerializer, TitlePostSerializer)
+from reviews.models import Category, Genre, Title
 
 
 class SignupAPIView(APIView):
@@ -96,4 +99,43 @@ class CategoryViewSet(CreateListDelViewSet):
         category = get_object_or_404(queryset, slug=pk)
         self.perform_destroy(category)
         return Response(status=status.HTTP_204_NO_CONTENT)
-  
+
+
+class GenreViewSet(CreateListDelViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+    permission_classes = [AdminOrReadOnly]
+    pagination_class = LimitOffsetPagination
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+
+    def destroy(self, request, pk=None):
+        queryset = Genre.objects.all()
+        genre = get_object_or_404(queryset, slug=pk)
+        self.perform_destroy(genre)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TitleFilterSet(FilterSet):
+    category = CharFilter(field_name='category__slug')
+    genre = CharFilter(field_name='genre__slug')
+    name = CharFilter(field_name='name', lookup_expr='icontains')
+    year = NumberFilter(field_name='year')
+
+    class Meta:
+        model = Title
+        fields = ['category', 'genre', 'name', 'year']
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitleSerializer
+    permission_classes = [AdminOrReadOnly]
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_class = TitleFilterSet
+    ordering_fields = ('name', 'year')
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'partial_update'):
+            return TitlePostSerializer
+        return TitleSerializer

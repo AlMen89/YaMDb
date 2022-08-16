@@ -1,6 +1,7 @@
 from random import randint
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
+from rest_framework.relations import SlugRelatedField
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User
 from reviews.models import Category, Genre, Title
@@ -59,6 +60,7 @@ class GetTokenSerializer(serializers.ModelSerializer):
 
 
 class MeSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
         fields = (
@@ -68,13 +70,43 @@ class MeSerializer(serializers.ModelSerializer):
 
 
 class UsersSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
         fields = (
             'username', 'email', 'first_name', 'last_name', 'bio', 'role'
         )
 
+
 class CategorySerializer(serializers.ModelSerializer):
+
     class Meta:
         fields = ('name', 'slug')
         model = Category
+
+
+class GenreSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        fields = ('name', 'slug')
+        model = Genre
+
+
+class TitleSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    genre = GenreSerializer(many=True, read_only=True)
+
+    class Meta:
+        fields = '__all__'
+        model = Title
+
+
+class TitlePostSerializer(serializers.ModelSerializer):
+    category = SlugRelatedField(
+        slug_field='slug', queryset=Category.objects.all())
+    genre = SlugRelatedField(
+        slug_field='slug', queryset=Genre.objects.all(), many=True)
+
+    class Meta:
+        fields = '__all__'
+        model = Title
