@@ -1,5 +1,3 @@
-from django.conf import settings
-from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, status, viewsets, mixins
 from django_filters import FilterSet, CharFilter, NumberFilter
@@ -11,9 +9,9 @@ from rest_framework.views import APIView
 from rest_framework.pagination import LimitOffsetPagination
 from users.models import User
 
-from .permissions import AdminAccess, AdminOrReadOnly
+from .permissions import AdminOrSuperuserOnly, AdminOrReadOnly
 from .serializers import (
-    GetTokenSerializer, MeSerializer, SignupSerializer, UsersSerializer,
+    GetTokenSerializer, MeSerializer, SignupSerializer, UserSerializer,
     CategorySerializer, GenreSerializer, TitleSerializer, TitlePostSerializer)
 from reviews.models import Category, Genre, Title
 
@@ -30,17 +28,6 @@ class SignupAPIView(APIView):
         serializer = SignupSerializer(instance, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            user = get_object_or_404(
-                User,
-                username=request.data.get('username'),
-                email=request.data.get('email')
-            )
-            subject = 'YaMDb: Подтверждение учетных данных'
-            message = (
-                'Здравствуйте! Код для подтверждения ваших учетных данных:'
-                f' {user.confirmation_code}. Никому его не сообщайте!'
-            )
-            send_mail(subject, message, settings.EMAIL_BACKEND, (user.email,))
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -53,10 +40,10 @@ class GetTokenAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UsersViewSet(viewsets.ModelViewSet):
-    serializer_class = UsersSerializer
-    queryset = User.objects.all().order_by('date_joined')
-    permission_classes = (AdminAccess,)
+class UserViewSet(viewsets.ModelViewSet):
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    permission_classes = (AdminOrSuperuserOnly,)
     lookup_field = 'username'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
