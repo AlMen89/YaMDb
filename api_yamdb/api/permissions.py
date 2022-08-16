@@ -1,7 +1,7 @@
 from rest_framework import permissions
 
 
-class AdminAccess(permissions.BasePermission):
+class AdminOrSuperuserOnly(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and (
