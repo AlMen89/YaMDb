@@ -1,3 +1,4 @@
+from django.db.models import Avg
 from rest_framework import filters, status, viewsets, mixins
 from django_filters import FilterSet, CharFilter, NumberFilter
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,16 +14,15 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 
-from ..reviews.models import Review, Title
-
-from .serializers import CommentSerializer, ReviewSerializer
+from reviews.models import Review
 
 
-from .permissions import AdminOrSuperuserOnly, AdminOrReadOnly
+from .permissions import AdminOrSuperuserOnly, AdminOrReadOnly, CommentReviewPermission
 from .serializers import (
     GetTokenSerializer, MeSerializer, SignupSerializer, UserSerializer,
-    CategorySerializer, GenreSerializer, TitleSerializer, TitlePostSerializer)
-from ..reviews.models import Category, Genre, Title
+    CategorySerializer, GenreSerializer, TitleSerializer, TitlePostSerializer,
+    CommentSerializer, ReviewSerializer)
+from reviews.models import Category, Genre, Title
 
 
 class SignupAPIView(APIView):
@@ -43,7 +43,7 @@ class SignupAPIView(APIView):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = [CommentReviewPermission]
 
     def get_queryset(self):
         title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
@@ -57,7 +57,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = [CommentReviewPermission]
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
@@ -155,7 +155,8 @@ class TitleFilterSet(FilterSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
+    queryset = Title.objects.all().annotate(
+        rating=Avg('reviews__score')).order_by('id')
     serializer_class = TitleSerializer
     permission_classes = [AdminOrReadOnly]
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)

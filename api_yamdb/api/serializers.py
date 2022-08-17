@@ -1,6 +1,6 @@
 from rest_framework.exceptions import ValidationError
 
-from ..reviews.models import Comment, Review, Category, Genre, Title
+from reviews.models import Comment, Review, Category, Genre, Title
 from random import randint
 
 from django.conf import settings
@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework_simplejwt.tokens import RefreshToken
-from ..users.models import User
+from users.models import User
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -151,10 +151,12 @@ class GenreSerializer(serializers.ModelSerializer):
 class TitleSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(many=True, read_only=True)
+    rating = serializers.IntegerField(required=False)
 
     class Meta:
-        fields = '__all__'
         model = Title
+        fields = (
+            'id', 'name', 'year', 'category', 'genre', 'rating', 'description')
 
 
 class TitlePostSerializer(serializers.ModelSerializer):
