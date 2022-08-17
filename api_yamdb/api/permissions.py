@@ -10,7 +10,7 @@ def admin_access(request):
 class AdminOrSuperuserOnly(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        return request.user.is_authenticated and admin_access(request)
+        return admin_access(request)
 
 
 class AdminOrReadOnly(permissions.BasePermission):
