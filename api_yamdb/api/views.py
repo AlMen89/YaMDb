@@ -1,5 +1,5 @@
 from django.db.models import Avg
-from rest_framework import filters, status, viewsets, mixins
+from rest_framework import filters, status, mixins
 from django_filters import FilterSet, CharFilter, NumberFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
@@ -11,7 +11,6 @@ from users.models import User
 from django.shortcuts import get_object_or_404
 
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 
 from reviews.models import Review
@@ -50,8 +49,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return title.reviews.all()
 
     def perform_create(self, serializer):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
         serializer.save(author=self.request.user, title=title)
 
 
@@ -66,9 +64,8 @@ class CommentViewSet(viewsets.ModelViewSet):
         return review.comments.all()
 
     def perform_create(self, serializer):
-        title_id = self.kwargs.get('title_id')
-        review_id = self.kwargs.get('review_id')
-        review = get_object_or_404(Review, id=review_id, title__id=title_id)
+        review = get_object_or_404(Review, id=self.kwargs.get('review_id'),
+                                   title__id=self.kwargs.get('title_id'))
         serializer.save(author=self.request.user, review=review)
 
 
