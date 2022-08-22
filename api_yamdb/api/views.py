@@ -6,23 +6,18 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
-from users.models import User
+from rest_framework.pagination import (
+    LimitOffsetPagination, PageNumberPagination)
 from django.shortcuts import get_object_or_404
 
-from rest_framework import viewsets
-
-
-from reviews.models import Review
-
-
+from users.models import User
+from reviews.models import Category, Genre, Title
 from .permissions import (
     AdminOrSuperuserOnly, AdminOrReadOnly, CommentReviewPermission)
 from .serializers import (
     GetTokenSerializer, MeSerializer, SignupSerializer, UserSerializer,
     CategorySerializer, GenreSerializer, TitleSerializer, TitlePostSerializer,
     CommentSerializer, ReviewSerializer)
-from reviews.models import Category, Genre, Title
 
 
 class SignupAPIView(APIView):
