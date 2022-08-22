@@ -1,13 +1,12 @@
-from rest_framework.exceptions import ValidationError
+import re
 
-from reviews.models import Comment, Review, Category, Genre, Title
-from random import randint
-
-from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
+from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.tokens import RefreshToken
+from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
 
 
@@ -54,47 +53,51 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class SignupSerializer(serializers.ModelSerializer):
+class SignupSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField(max_length=254)
 
-    class Meta:
-        model = User
-        fields = ('email', 'username')
-
-    def validate(self, data):
-        if data.get('username') == 'me':
+    def validate_username(self, value):
+        if value == 'me':
             raise serializers.ValidationError(
                 'Нельзя использовать "me" в качестве username. '
                 'Придумайте, пожалуйста, другой username.'
             )
+        if re.match(r'^[\w.@+-]+$', value) is None:
+            raise serializers.ValidationError(
+                'Допустимы только английские буквы, цифры и символы @/./+/-/_'
+            )
+        return value
+
+    def validate(self, data):
+        """Проверяет уникальность username и email с возможностью запрашивать
+        код подтверждения на почту повторно, если переданная
+        в запросе комбинация username и email уже есть в БД.
+        """
+        if (
+            User.objects.filter(username=data.get('username'))
+            and not User.objects.filter(email=data.get('email'))
+        ):
+            raise serializers.ValidationError(
+                'Пользователь с таким username уже существует'
+            )
+        if (
+            User.objects.filter(email=data.get('email'))
+            and not User.objects.filter(username=data.get('username'))
+        ):
+            raise serializers.ValidationError(
+                'Пользователь с таким email уже существует'
+            )
         return data
-
-    def send_mail_with_confirmation_code(self, user):
-        subject = 'YaMDb: Подтверждение учетных данных'
-        message = (
-            'Здравствуйте! Код для подтверждения ваших учетных данных:'
-            f' {user.confirmation_code}. Никому его не сообщайте!'
-        )
-        return user.email_user(subject, message, settings.EMAIL_BACKEND)
-
-    def create(self, validated_data):
-        user = User.objects.create(
-            username=validated_data.get('username'),
-            email=validated_data.get('email'),
-            confirmation_code=randint(100000, 999999)
-        )
-        self.send_mail_with_confirmation_code(user)
-        return user
-
-    def update(self, instance, validated_data):
-        instance.confirmation_code = randint(100000, 999999)
-        instance.save()
-        self.send_mail_with_confirmation_code(instance)
-        return instance
 
 
 class GetTokenSerializer(serializers.ModelSerializer):
     token = serializers.SerializerMethodField()
-    username = serializers.CharField(write_only=True)
+    username = serializers.CharField(
+        write_only=True,
+        max_length=150,
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
     confirmation_code = serializers.CharField(write_only=True)
 
     class Meta:
@@ -115,23 +118,33 @@ class GetTokenSerializer(serializers.ModelSerializer):
         return data
 
 
-class MeSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
-        )
-        read_only_fields = ('role',)
-
-
 class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=150,
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
+    email = serializers.EmailField(
+        max_length=254,
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
 
     class Meta:
         model = User
         fields = (
             'username', 'email', 'first_name', 'last_name', 'bio', 'role'
         )
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError(
+                'Нельзя использовать "me" в качестве username. '
+                'Придумайте, пожалуйста, другой username.'
+            )
+        if re.match(r'^[\w.@+-]+$', value) is None:
+            raise serializers.ValidationError(
+                'Допустимы только английские буквы, цифры и символы @/./+/-/_'
+            )
+        return value
 
 
 class CategorySerializer(serializers.ModelSerializer):

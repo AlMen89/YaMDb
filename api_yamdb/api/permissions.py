@@ -1,43 +1,36 @@
 from rest_framework import permissions
-
-
-def admin_access(request):
-    """Проверяет наличие прав админа/суперпользователя."""
-    return (hasattr(request.user, 'role') and request.user.role == 'admin'
-            or request.user.is_superuser)
+from users.models import User
 
 
 class AdminOrSuperuserOnly(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        return admin_access(request)
+        return User.admin_access(self, request)
 
 
 class AdminOrReadOnly(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        return (request.method in permissions.SAFE_METHODS
-                or admin_access(request))
+        return (
+            request.method in permissions.SAFE_METHODS
+            or User.admin_access(self, request)
+        )
 
 
 class CommentReviewPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         return (
             request.method in permissions.SAFE_METHODS
-            or request.user.is_authenticated
+            or User.authenticated_user_access(self, request)
         )
 
     def has_object_permission(self, request, view, obj):
         return (
             request.method in permissions.SAFE_METHODS
+            or User.moderator_access(self, request)
+            or User.admin_access(self, request)
             or (
-                request.user.is_authenticated
-                and (
-                    obj.author == request.user
-                    or request.user.role == 'moderator'
-                    or request.user.role == 'admin'
-                    or request.user.is_staff
-                    or request.user.is_superuser
-                )
+                User.authenticated_user_access(self, request)
+                and obj.author == request.user
             )
         )
