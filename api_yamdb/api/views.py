@@ -1,44 +1,44 @@
+from django.conf import settings
 from django.db.models import Avg
-from rest_framework import filters, status, viewsets, mixins
-from django_filters import FilterSet, CharFilter, NumberFilter
+from django.shortcuts import get_object_or_404
+from django_filters import CharFilter, FilterSet, NumberFilter
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.pagination import LimitOffsetPagination
+from reviews.models import Category, Genre, Review, Title
 from users.models import User
-from django.shortcuts import get_object_or_404
 
-from rest_framework import viewsets
-
-
-from reviews.models import Review
-
-
-from .permissions import (
-    AdminOrSuperuserOnly, AdminOrReadOnly, CommentReviewPermission)
-from .serializers import (
-    GetTokenSerializer, MeSerializer, SignupSerializer, UserSerializer,
-    CategorySerializer, GenreSerializer, TitleSerializer, TitlePostSerializer,
-    CommentSerializer, ReviewSerializer)
-from reviews.models import Category, Genre, Title
+from .permissions import (AdminOrReadOnly, AdminOrSuperuserOnly,
+                          CommentReviewPermission)
+from .serializers import (CategorySerializer, CommentSerializer,
+                          GenreSerializer, GetTokenSerializer,
+                          ReviewSerializer, SignupSerializer,
+                          TitlePostSerializer, TitleSerializer, UserSerializer)
 
 
 class SignupAPIView(APIView):
     def post(self, request):
+        serializer = SignupSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         try:
-            instance = User.objects.get(
-                username=request.data.get('username'),
-                email=request.data.get('email')
+            user, stat = User.objects.get_or_create(
+                **serializer.validated_data
             )
-        except User.DoesNotExist:
-            instance = None
-        serializer = SignupSerializer(instance, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            user.confirmation_code = User.get_confirmation_code(self)
+            user.save()
+            subject = 'YaMDb: Подтверждение учетных данных'
+            message = (
+                'Здравствуйте! Код для подтверждения ваших учетных данных:'
+                f' {user.confirmation_code}. Никому его не сообщайте!'
+            )
+            user.email_user(subject, message, settings.EMAIL_BACKEND)
+        except Exception as error:
+            raise (error)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -75,9 +75,8 @@ class CommentViewSet(viewsets.ModelViewSet):
 class GetTokenAPIView(APIView):
     def post(self, request):
         serializer = GetTokenSerializer(data=request.data)
-        if serializer.is_valid():
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -95,16 +94,13 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def me(self, request):
         if request.method == 'PATCH':
-            serializer = MeSerializer(
+            serializer = UserSerializer(
                 request.user, data=request.data, partial=True
             )
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(
-                serializer.errors, status=status.HTTP_400_BAD_REQUEST
-            )
-        serializer = MeSerializer(request.user)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(role=self.request.user.role)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
 
