@@ -1,65 +1,43 @@
-import datetime
-import sqlite3
+﻿import csv
+import logging
 
-import pandas
-from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management import BaseCommand
+
+from reviews.models import (
+    User, Title, Category, Genre, GenreTitle, Review, Comment
+)
+
+logger = logging.getLogger(__name__)
+
+CSV_FILES = [
+    ['users.csv', User],
+    ['category.csv', Category],
+    ['genre.csv', Genre],
+    ['titles.csv', Title],
+    ['genre_title.csv', GenreTitle],
+    ['review.csv', Review],
+    ['comments.csv', Comment],
+]
 
 
 class Command(BaseCommand):
-    help = 'Наполнение базы данных'
+    help = 'import csv data into database'
 
     def handle(self, *args, **options):
-        connection = sqlite3.connect('db.sqlite3')
-        data_to_load = (
-            (f'{settings.BASE_DIR}/static/data/titles.csv', 'reviews_title'),
-            (f'{settings.BASE_DIR}/static/data/users.csv', 'users_customuser'),
-            (f'{settings.BASE_DIR}/static/data/review.csv', 'reviews_review'),
-            (f'{settings.BASE_DIR}/static/data/category.csv',
-                'reviews_category'),
-            (f'{settings.BASE_DIR}/static/data/comments.csv',
-                'reviews_comment'),
-            (f'{settings.BASE_DIR}/static/data/genre_title.csv',
-                'reviews_genre_title'),
-            (f'{settings.BASE_DIR}/static/data/genre.csv', 'reviews_genre'),
-        )
 
-        for path, table in data_to_load:
-            try:
-                df = pandas.read_csv(
-                    path,
-                    sep=',',
-                    header=0,
-                )
-                df.rename(
-                    columns={
-                        'category': 'category_id',
-                        'author': 'author_id',
-                    },
-                    inplace=True,
-                )
-                df.columns
-                if table == 'users_customuser':
-                    new_df = df.assign(
-                        password='12345555',
-                        is_superuser=False,
-                        is_staff=False,
-                        is_active=True,
-                        date_joined=datetime.datetime.now(),
-                        first_name='null',
-                        last_name='null',
-                        bio='null'
-                    )
-                else:
-                    new_df = df
-                new_df.to_sql(
-                    table,
-                    connection,
-                    if_exists='append',
-                    index=False
-                )
-                print(f'Данные {path} загружены')
-            except Exception as error:
-                print(f'Ошибка- {error}')
-            finally:
-                print('Конец скрипта')
+        self.stdout.write(self.style.NOTICE('Очистка базы данных'))
+
+        for _, model in reversed(CSV_FILES):
+            model.objects.all().delete()
+
+        self.stdout.write(self.style.NOTICE('Подготовка новых данных'))
+
+        for file, model in CSV_FILES:
+            with open('static/data/' + file, 'r', encoding='utf-8') as f:
+                logger.info(f'Выполняется загрузка данных модели {model.__name__}, из файла {file}')
+                reader = csv.DictReader(f)
+                for dict_row in reader:
+                    logger.info(f'Загрузка данных {dict_row} в модель {model.__name__}')
+                    model.objects.get_or_create(**dict_row)
+
+        self.stdout.write(self.style.SUCCESS('Новые данные внесены в базу'))

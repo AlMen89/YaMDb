@@ -130,3 +130,24 @@ EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 
 # директория, в которую складываются файлы писем
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'root': {
+        'handlers': ['stdout'],
+        'level': 'INFO',
+    },
+    'formatters': {
+        'colored': {
+            '()': 'colorlog.ColoredFormatter',
+            'format': '%(log_color)s%(levelname)-8s%(reset)s %(yellow)s%(message)s'
+        },
+    },
+    'handlers': {
+        'stdout': {
+            'class': 'colorlog.StreamHandler',
+            'formatter': 'colored',
+        },
+    },
+}
