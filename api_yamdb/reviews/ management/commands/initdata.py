@@ -60,6 +60,6 @@ class Command(BaseCommand):
                 )
                 print(f'Данные {path} загружены')
             except Exception as error:
-                print(f'Ошибка- {error}')
+                print(f'Ошибка - {error}')
             finally:
                 print('Конец скрипта')
