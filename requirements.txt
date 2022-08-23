@@ -8,4 +8,3 @@ pytest-pythonpath==0.7.3
 djangorestframework-simplejwt==4.7.2
 django-filter==21.1
 pandas~=1.4.3
-colorlog==6.6.0
