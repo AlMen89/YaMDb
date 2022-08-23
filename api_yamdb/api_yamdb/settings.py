@@ -29,7 +29,6 @@ INSTALLED_APPS = [
     'users',
     'reviews',
     'api',
-    'colorlog',
 ]
 
 MIDDLEWARE = [
@@ -137,17 +136,5 @@ LOGGING = {
     'root': {
         'handlers': ['stdout'],
         'level': 'INFO',
-    },
-    'formatters': {
-        'colored': {
-            '()': 'colorlog.ColoredFormatter',
-            'format': '%(log_color)s%(levelname)-8s%(reset)s %(yellow)s%(message)s'
-        },
-    },
-    'handlers': {
-        'stdout': {
-            'class': 'colorlog.StreamHandler',
-            'formatter': 'colored',
-        },
     },
 }
