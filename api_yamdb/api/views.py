@@ -5,19 +5,23 @@ from django_filters import CharFilter, FilterSet, NumberFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from rest_framework.pagination import (
+    LimitOffsetPagination, PageNumberPagination)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import (
+    LimitOffsetPagination, PageNumberPagination)
+from django.shortcuts import get_object_or_404
 
 from users.models import User
-from reviews.models import Category, Genre, Review, Title
-from .permissions import (AdminOrReadOnly, AdminOrSuperuserOnly,
-                          CommentReviewPermission)
-from .serializers import (CategorySerializer, CommentSerializer,
-                          GenreSerializer, GetTokenSerializer,
-                          ReviewSerializer, SignupSerializer,
-                          TitlePostSerializer, TitleSerializer, UserSerializer)
+from reviews.models import Category, Genre, Title, Review
+from .permissions import (
+    AdminOrSuperuserOnly, AdminOrReadOnly, CommentReviewPermission)
+from .serializers import (
+    GetTokenSerializer, SignupSerializer, UserSerializer,
+    CategorySerializer, GenreSerializer, TitleSerializer, TitlePostSerializer,
+    CommentSerializer, ReviewSerializer)
 
 
 class SignupAPIView(APIView):
@@ -46,13 +50,14 @@ class ReviewViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
     permission_classes = [CommentReviewPermission]
 
+    def title(self):
+        return get_object_or_404(Title, id=self.kwargs.get('title_id'))
+
     def get_queryset(self):
-        title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
-        return title.reviews.all().order_by('pub_date')
+        return self.title().reviews.all()
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(author=self.request.user, title=self.title())
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -60,17 +65,15 @@ class CommentViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
     permission_classes = [CommentReviewPermission]
 
+    def review_id(self):
+        return get_object_or_404(Review, id=self.kwargs.get('review_id'),
+                                 title_id=self.kwargs.get('title_id'))
+
     def get_queryset(self):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        review = get_object_or_404(
-            title.reviews, id=self.kwargs.get('review_id'))
-        return review.comments.all().order_by('pub_date')
+        return self.review_id().comments.all()
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        review = get_object_or_404(
-            title.reviews, id=self.kwargs.get('review_id'))
-        serializer.save(author=self.request.user, review=review)
+        serializer.save(author=self.request.user, review=self.review_id())
 
 
 class GetTokenAPIView(APIView):

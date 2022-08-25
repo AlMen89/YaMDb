@@ -40,23 +40,21 @@ class User(AbstractUser):  # переопределены email, first_name и p
         """Генерирует код для подтверждения учетных данных пользователя."""
         return randint(100000, 999999)
 
-    def admin_access(self, request):
+    @property
+    def admin_access(self):
         """Проверяет наличие прав админа/суперпользователя."""
         return (
-            request.user.is_authenticated and (
-                request.user.role == 'admin'
-                or request.user.is_superuser
-                or request.user.is_staff
+            self.is_authenticated and (
+                self.role == ROLE_CHOICES[2][0]
+                or self.is_superuser
+                or self.is_staff
             )
         )
 
-    def moderator_access(self, request):
+    @property
+    def moderator_access(self):
         """Проверяет наличие прав модератора."""
         return (
-            request.user.is_authenticated
-            and request.user.role == 'moderator'
+            self.is_authenticated
+            and self.role == ROLE_CHOICES[1][0]
         )
-
-    def authenticated_user_access(self, request):
-        """Проверяет наличие прав аутентифицированного пользователя."""
-        return request.user.is_authenticated
